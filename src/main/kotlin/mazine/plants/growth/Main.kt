@@ -13,4 +13,15 @@ fun main(args: Array<String>) {
 
     val writer = GrowthRateWriter(FileWriter("growth_rate_diffs.csv"))
     writer.write(phases.asSequence() + controlGroupPhases)
+
+    val reader2 = GrowthRatePhasesReader(InputStreamReader(GrowthRatePhasesReader::class.java.classLoader.getResourceAsStream("replicates_growth_rate_input.csv")))
+    val phases2 = reader2.read()
+    val joined = GrowthRatePhase("Joined").apply {
+        plants.addAll(phases2[0].plants)
+        plants.addAll(phases2[1].plants)
+    }
+
+    val writer2 = GrowthRateWriter(FileWriter("replicates_growth_rate_diffs.csv"))
+    writer2.write(phases2.asSequence() + sequenceOf(joined))
+
 }
