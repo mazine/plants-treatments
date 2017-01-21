@@ -1,6 +1,5 @@
 package mazine.plants.mortality
 
-import mazine.plants.ControlGroup
 import java.io.FileWriter
 import java.io.InputStreamReader
 
@@ -10,11 +9,6 @@ fun main(args: Array<String>) {
 
 //    mortalityRateMultiplied(plants)
     mortalityRateAverage(plants)
-}
-
-private fun mortalityRateMultiplied(plants: List<PlantMortality>) {
-    val writer = MortalityRateWriter(FileWriter("mortality_rate_output.csv"))
-    writer.write(plants.asSequence(), ControlGroup.values().filter { it.range.start == 1 }.map { it.range.endInclusive })
 }
 
 private fun mortalityRateAverage(plants: List<PlantMortality>) {

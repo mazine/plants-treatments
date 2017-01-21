@@ -29,10 +29,10 @@ enum class TreatmentPhase(vararg val view: Pair<Filter, IntRange>) {
     fun apply(plants: List<Plant>): List<Plant> {
         return view.fold(emptySequence<Plant>()) { cur, it ->
             val (filter, range) = it
-            plants.asSequence().filter { plant ->
+            cur + plants.asSequence().filter { plant ->
                 plant.replicate in filter.replicates && plant.treatment in filter.treatments
             }.map {
-                Plant(it.replicate, it.treatment, it.name, it.states.subList(range.start - 1, range.endInclusive))
+                Plant(it.replicate, it.treatment, it.name, it.states.subList(range.start - 1, Math.min(range.endInclusive, it.states.size)))
             }.filter {
                 it.states.any { it is State.Alive }
             }
