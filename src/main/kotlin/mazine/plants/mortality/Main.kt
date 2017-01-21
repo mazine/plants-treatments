@@ -7,7 +7,6 @@ fun main(args: Array<String>) {
     val reader = MortalityRateReader(InputStreamReader(MortalityRateReader::class.java.classLoader.getResourceAsStream("mortality_rate_input.csv")))
     val plants = reader.read()
 
-//    mortalityRateMultiplied(plants)
     mortalityRateAverage(plants)
 }
 

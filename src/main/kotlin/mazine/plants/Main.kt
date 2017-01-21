@@ -1,12 +1,13 @@
 package mazine.plants
 
+import mazine.plants.growth.GrowthRateWriter
+import mazine.plants.growth.RGrowthRateWriter
 import mazine.plants.raw.Plant
 import mazine.plants.raw.Replicate
 import mazine.plants.raw.State
+import mazine.plants.raw.treatments
 import mazine.plants.view.TreatmentPhase
 import mazine.plants.view.TreatmentPhaseWriter
-import org.apache.commons.csv.CSVFormat
-import org.apache.commons.csv.CSVPrinter
 import org.apache.commons.math3.stat.regression.SimpleRegression
 import java.io.FileWriter
 
@@ -14,61 +15,45 @@ import java.io.FileWriter
 fun main(args: Array<String>) {
     val rawData = Replicate.I.load() + Replicate.II.load()
     writePhases(rawData)
-    CSVPrinter(FileWriter("growth_phases.csv"), CSVFormat.EXCEL.withDelimiter(';')).use { printer ->
-        TreatmentPhase.values().forEach { phase ->
-            printer.printRecord(phase.name)
 
-            val plants = phase.apply(rawData)
-            val size = plants.map { it.states.size }.max() ?: 0
+    GrowthRateWriter(FileWriter("growth_rate.csv")).write(rawData)
+    RGrowthRateWriter(FileWriter("growth_rate_R_detailed.csv"), isDetailed = true).write(rawData)
+    RGrowthRateWriter(FileWriter("growth_rate_R.csv"), isDetailed = false).write(rawData)
 
-            printer.printRecord(null, *(1..size-1).map { day ->
-                "$day - ${day + 1}"
-            }.toTypedArray())
-
-            plants.forEach { plant ->
-                printer.printRecord(plant.name, *(1..size - 1).map { day ->
-                    if (day < plant.states.size) {
-                        val stateOfCurDay = plant.states[day] as? State.Alive
-                        val stateOnPrevDay = plant.states[day - 1] as? State.Alive
-                        if (stateOfCurDay != null && stateOnPrevDay != null) {
-                            (stateOfCurDay.height - stateOnPrevDay.height).toString()
-                        } else {
-                            null
-                        }
-                    } else {
-                        null
-                    }
-                }.toTypedArray())
-            }
-
-//            val avgIncPerDay = (1..size - 1).map { day ->
-//                // Heights of alive plants for the day number `day`
-//                val heightIncs = plants.map {
-//                    if (day < it.states.size) {
-//                        val stateOfCurDay = it.states[day] as? State.Alive
-//                        val stateOnPrevDay = it.states[day - 1] as? State.Alive
-//                        if (stateOfCurDay != null && stateOnPrevDay != null) {
-//                            stateOfCurDay.height - stateOnPrevDay.height
-//                        } else {
-//                            null
-//                        }
-//                    } else {
-//                        null
-//                    }
-//                }.filterNotNull().map { heightInc ->
-//                    heightInc.toDouble()
-//                }
-//                heightIncs.avg
-//            }
-//            println("${phase.name} avg$avgIncPerDay = ${avgIncPerDay.map { it.avg }.filter { it.isFinite() }.avg}")
-        }
-
-    }
+    mortality(Replicate.I)
+    mortality(Replicate.II)
 }
 
 fun writePhases(rawData: List<Plant>) {
     val writer = TreatmentPhaseWriter(FileWriter("growth_phases.csv"))
     writer.write(TreatmentPhase.values().toList(), rawData)
+}
+
+
+fun mortality(replicate: Replicate) {
+    val consideredDays = listOf(
+            "A+" to 1..2,
+            "A-" to 1..2,
+            "B+" to 1..5,
+            "B-" to 1..5,
+            "C+" to 1..9,
+            "C-" to 1..9,
+            "D" to 1..16
+    ).map {
+        treatments[it.first]!! to it.second
+    }.toMap()
+
+    val plants = replicate.load()
+
+    println("Replicate ${replicate.name}")
+    (1..16).forEach { day ->
+        val consideredPlants = plants.filter { day in consideredDays[it.treatment]!! }
+        val alive = consideredPlants.count { it.states[day - 1] is State.Alive }
+        val faded = consideredPlants.count { it.states[day - 1] is State.Faded }
+        val dead = consideredPlants.count { it.states[day - 1] is State.Dead }
+        val total = consideredPlants.count()
+        println("Day: $day, alive: $alive, faded: $faded, dead: $dead, total: $total")
+    }
 }
 
 fun List<Plant>.regression(): SimpleRegression {
